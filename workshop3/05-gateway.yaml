@@ -1,0 +1,39 @@
+--- 
+apiVersion: gateway.networking.k8s.io/v1 
+kind: Gateway
+metadata: 
+  name: umami-gtw 
+  namespace: workshop03
+spec:
+  gatewayClassName: cilium
+  listeners:
+  - name: web 
+    port: 80 
+    protocol: HTTP 
+    #hostname: '*'
+    hostname: '*.nip.io'
+    allowedRoutes:
+      namespaces:
+        from: All
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: umami-route
+  namespace: workshop03
+spec:
+  parentRefs:
+  - name: umami-gtw
+    namespace: workshop03
+  hostnames:
+  - "*.nip.io"
+  - "umami.172-17-0-3.nip.io"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: umamiapp-svc
+      port: 3000

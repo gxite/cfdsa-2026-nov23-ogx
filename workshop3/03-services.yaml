@@ -1,0 +1,40 @@
+--- 
+apiVersion: v1 
+kind: Service
+metadata:
+  name: umamidb-svc
+  namespace: workshop03
+  labels:
+    app: umami
+    env: dev
+    version: v1
+spec:
+  type: ClusterIP
+  selector:
+    app: umamidb
+    env: dev
+    version: v1
+  ports:
+  - port: 5432
+    targetPort: 5432
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: umamiapp-svc
+  namespace: workshop03
+  labels:
+    app: umamiapp
+    env: dev
+    version: v1
+spec:
+  type: ClusterIP
+  selector:
+    app: umamiapp
+    env: dev
+    version: v1
+  ports:
+  - name: umami-port
+    port: 3000
+    targetPort: umami-port

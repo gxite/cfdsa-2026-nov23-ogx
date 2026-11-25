@@ -1,0 +1,128 @@
+--- 
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: umamidb-deploy
+  namespace: workshop03
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: umamidb
+      env: dev
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: umamidb
+        env: dev
+        version: v1
+    spec: 
+        volumes:
+        - name: umamidb-vol 
+          persistentVolumeClaim:
+            claimName: umamidb-pvc
+        containers:
+        - name: umamidb
+          image: postgres:16-alpine
+          volumeMounts:
+          - name: umamidb-vol        
+            mountPath: /var/lib/postgresql/data
+          ports:
+          - name: postgres-port
+            containerPort: 5432
+            protocol: TCP
+          env: 
+          - name: POSTGRES_USER 
+            valueFrom:
+              secretKeyRef:   
+                name: umamidb-secret
+                key: POSTGRES_USER
+          - name: POSTGRES_PASSWORD 
+            valueFrom:
+              secretKeyRef:   
+                name: umamidb-secret
+                key: POSTGRES_PASSWORD 
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:   
+                name: umamidb-secret
+                key: POSTGRES_DB
+          - name: PGDATA
+            value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command:
+              - pg_isready
+              - -h
+              - localhost
+              - -U
+              - $(POSTGRES_USER)
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+ 
+---
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: umamiapp-deploy
+  namespace: workshop03
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: umamiapp
+      env: dev
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: umamiapp
+        env: dev
+        version: v1
+    spec:  
+        containers:
+        - name: umamiapp
+          image: ghcr.io/umami-software/umami:latest
+          imagePullPolicy: IfNotPresent
+          env: 
+          - name: APP_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: umamiapp-secret
+                key: APP_SECRET
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: umamidb-secret
+                key: POSTGRES_USER
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: umamidb-secret
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: umamidb-secret
+                key: POSTGRES_DB
+          - name: DATABASE_URL 
+            value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@umamidb-svc:5432/$(POSTGRES_DB)
+          ports:
+          - name: umami-port
+            containerPort: 3000
+            protocol: TCP
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "256m"
+            limits:
+              memory: "512Mi"
+              cpu: "256m"

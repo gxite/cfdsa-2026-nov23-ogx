@@ -1,0 +1,28 @@
+---
+apiVersion: v1 
+kind: Secret
+metadata:
+  name: umamidb-secret
+  namespace: workshop03
+  labels:
+    app: umami
+    env: dev
+    version: v1
+data:
+  POSTGRES_USER: dW1hbWk=
+  POSTGRES_PASSWORD: bXlkYnBhc3N3b3Jk
+  POSTGRES_DB: dW1hbWk=
+
+---
+apiVersion: v1 
+kind: Secret
+metadata:
+  name: umamiapp-secret
+  namespace: workshop03
+  labels:
+    app: umami
+    env: dev
+    version: v1
+data:
+  APP_SECRET: 04c883bd2a872b28bd651726df065fa1849a6e264e0676a091972c78d49cb402
+ 
