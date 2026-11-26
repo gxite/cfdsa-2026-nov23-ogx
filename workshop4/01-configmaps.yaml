@@ -1,0 +1,58 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rustfs-secret
+  namespace: workshop4
+  labels:
+    app: rustfs
+    env: dev
+    version: v1
+type: Opaque
+# Workshop credentials 
+stringData:
+  RUSTFS_ACCESS_KEY: rustfs
+  RUSTFS_SECRET_KEY: bigsecret
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rustfs-config
+  namespace: workshop4
+  labels:
+    app: rustfs
+    env: dev
+    version: v1
+data:
+  RUSTFS_ADDRESS: ":9000"
+  RUSTFS_CONSOLE_ADDRESS: ":9001"
+  RUSTFS_CONSOLE_ENABLE: "true"
+  RUSTFS_VOLUMES: "http://rustfs-{0...2}.rustfs-headless.workshop4.svc.cluster.local:9000/data"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rustfs-config-file
+  namespace: workshop4
+  labels:
+    app: rustfs
+    env: dev
+    version: v1
+data:
+  config.yaml: |
+    server:
+      listen_address: "0.0.0.0:9000"
+      console_address: "0.0.0.0:9001"
+      log_level: "info"
+
+    storage:
+      data_path: "/data"
+      sync_mode: "async"
+      cache:
+        enabled: true
+        size_mb: 64
+
+    auth:
+      provider: "env"

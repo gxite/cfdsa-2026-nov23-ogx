@@ -1,0 +1,9 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workshop4
+  labels:
+    app: rustfs
+    env: dev
+    version: v1

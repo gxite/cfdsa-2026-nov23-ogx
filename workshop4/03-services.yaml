@@ -1,0 +1,48 @@
+---
+# Headless Service: gives each StatefulSet pod a stable DNS name 
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs-headless
+  namespace: workshop4
+  labels:
+    app: rustfs
+    env: dev
+    version: v1
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true # lets peers resolve each other during startup before pod is ready
+  selector:
+    app: rustfs
+  ports:
+    - name: s3-api
+      port: 9000
+      targetPort: s3-api
+    - name: web-console
+      port: 9001
+      targetPort: web-console
+
+---
+# Client-facing Service: load-balances S3 / console traffic across all nodes.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs
+  namespace: workshop4
+  labels:
+    app: rustfs
+    env: dev
+    version: v1
+spec:
+  type: ClusterIP
+  selector:
+    app: rustfs
+  ports:
+    - name: s3-api
+      port: 9000
+      targetPort: s3-api
+      protocol: TCP
+    - name: web-console
+      port: 9001
+      targetPort: web-console
+      protocol: TCP

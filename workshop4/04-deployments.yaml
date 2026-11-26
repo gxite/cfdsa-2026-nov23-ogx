@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rustfs
+  namespace: workshop4
+spec:
+  serviceName: rustfs-headless    # gives pods DNS names rustfs-0/1/2.rustfs-headless
+  replicas: 3                     # must match {0...2} in RUSTFS_VOLUMES
+  podManagementPolicy: Parallel   # start all pods together so they can find each other
+  selector:
+    matchLabels:
+      app: rustfs
+  template:
+    metadata:
+      labels:
+        app: rustfs
+    spec:
+      securityContext:
+        fsGroup: 10001            # volume files group-owned by the rustfs group (GID 10001)
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:1.0.6
+          ports:
+            - name: s3-api
+              containerPort: 9000
+            - name: web-console
+              containerPort: 9001
+          envFrom:
+            - secretRef:
+                name: rustfs-secret
+            - configMapRef:
+                name: rustfs-config
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:           # one PVC per pod: data-rustfs-0/1/2
+    - metadata:
+        name: data
+      spec:
+        storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

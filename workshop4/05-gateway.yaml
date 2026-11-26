@@ -1,0 +1,96 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: workshop4-pool
+spec:
+  blocks:
+    - cidr: 172.17.255.200/32
+  serviceSelector:
+    matchLabels:
+      io.kubernetes.service.namespace: workshop4
+      gateway.networking.k8s.io/gateway-name: rustfs-gateway
+
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: workshop4-l2
+spec:
+  loadBalancerIPs: true
+  interfaces:
+    - ^eth[0-9]+
+  serviceSelector:
+    matchLabels:
+      io.kubernetes.service.namespace: workshop4
+      gateway.networking.k8s.io/gateway-name: rustfs-gateway
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: rustfs-gateway
+  namespace: workshop4
+spec:
+  gatewayClassName: cilium
+  addresses:
+    - type: IPAddress
+      value: 172.17.255.200
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+
+---
+# S3 API -> rustfs:9000
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: rustfs-data
+  namespace: workshop4
+spec:
+  parentRefs:
+    - name: rustfs-gateway
+  hostnames:
+    - data.172.17.255.200.nip.io
+  rules:
+    - backendRefs:
+        - name: rustfs
+          port: 9000
+
+---
+# Web console -> rustfs:9001
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: rustfs-console
+  namespace: workshop4
+spec:
+  parentRefs:
+    - name: rustfs-gateway
+  hostnames:
+    - console.172.17.255.200.nip.io
+  rules:
+    # Redirect only browser page loads (Accept: text/html). After login the UI
+    # calls GET / as a signed S3 request, which must reach RustFS untouched.
+    - matches:
+        - path:
+            type: Exact
+            value: /
+          headers:
+            - name: Accept
+              type: RegularExpression
+              value: ".*text/html.*"
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /rustfs/console/
+            statusCode: 302
+    - backendRefs:
+        - name: rustfs
+          port: 9001
